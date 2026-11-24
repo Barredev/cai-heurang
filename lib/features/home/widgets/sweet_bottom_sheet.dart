@@ -15,6 +15,12 @@ class _SweetBottomSheetState extends ConsumerState<SweetBottomSheet> {
   String? _selected;
   final _nameCtrl = TextEditingController();
 
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
   final _drinks = [
     'tea', 'coffee', 'packaged', 'juice', 'energy', 'condensed_milk', 'other',
   ];
@@ -73,7 +79,7 @@ class _SweetBottomSheetState extends ConsumerState<SweetBottomSheet> {
                   duration: const Duration(milliseconds: 180),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color:  sel ? AppColors.sweetAmber.withOpacity(0.15)
+                    color:  sel ? AppColors.sweetAmber.withValues(alpha: 0.15)
                                 : AppColors.bgSurface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
@@ -126,7 +132,7 @@ class _SweetBottomSheetState extends ConsumerState<SweetBottomSheet> {
               onPressed: _selected != null ? _log : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.sweetAmber,
-                disabledBackgroundColor: AppColors.textHint.withOpacity(0.3),
+                disabledBackgroundColor: AppColors.textHint.withValues(alpha: 0.3),
               ),
               child: const Text('Catat 📝'),
             ),

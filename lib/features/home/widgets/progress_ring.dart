@@ -1,6 +1,8 @@
 // lib/features/home/widgets/progress_ring.dart
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_theme.dart';
 
 class ProgressRing extends StatelessWidget {
@@ -17,17 +19,27 @@ class ProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width:  size,
-      height: size,
-      child: CustomPaint(
-        painter: _RingPainter(
-          progress:    progress,
-          strokeWidth: strokeWidth,
-          bgColor:     AppColors.primaryLight.withOpacity(0.3),
-          fgColor:     AppColors.primary,
-        ),
-      ),
+    final target = progress.clamp(0.0, 1.0);
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: target),
+      duration: const Duration(milliseconds: 520),
+      curve: Curves.easeOutCubic,
+      builder: (_, animatedProgress, __) {
+        return SizedBox(
+          width:  size,
+          height: size,
+          child: CustomPaint(
+            painter: _RingPainter(
+              progress:    animatedProgress,
+              strokeWidth: strokeWidth,
+              bgColor:     AppColors.primaryLight.withValues(alpha: 0.32),
+              fgColor:     animatedProgress >= 1.0
+                  ? AppColors.success
+                  : AppColors.primary,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -79,5 +91,5 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress;
+      old.progress != progress || old.fgColor != fgColor;
 }

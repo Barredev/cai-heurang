@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/achievement_share_service.dart';
 import '../../../../shared/providers/app_providers.dart';
+import '../../home/widgets/achievement_share_sheet.dart';
 
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
@@ -12,6 +14,9 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile  = ref.watch(profileProvider);
+    // Watch daily water & sweet logs supaya tab Statistik ikut rebuild live
+    ref.watch(dailyWaterProvider);
+    ref.watch(sweetProvider);
     final repo     = ref.read(repoProvider);
     final summaries = profile != null
         ? repo.getWeeklySummaries(profile.id)
@@ -21,7 +26,20 @@ class StatsScreen extends ConsumerWidget {
         : 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistik 📊')),
+      appBar: AppBar(
+        title: const Text('Statistik 📊'),
+        actions: [
+          if (profile != null)
+            IconButton(
+              onPressed: () => showAchievementShareSheet(
+                context,
+                initialType: AchievementCardType.streak,
+              ),
+              icon: const Icon(Icons.ios_share_rounded),
+              tooltip: 'Bagikan Achievement',
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -65,7 +83,7 @@ class StatsScreen extends ConsumerWidget {
                   value: AppConstants.levelProgress(
                       profile.totalXp, profile.currentLevel),
                   minHeight: 12,
-                  backgroundColor: AppColors.primaryLight.withOpacity(0.3),
+                  backgroundColor: AppColors.primaryLight.withValues(alpha: 0.3),
                   valueColor: const AlwaysStoppedAnimation(AppColors.primary),
                 ),
               ),
@@ -116,7 +134,7 @@ class StatsScreen extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: pct,
                           minHeight: 6,
-                          backgroundColor: AppColors.primaryLight.withOpacity(0.2),
+                          backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
                           valueColor: AlwaysStoppedAnimation(
                             pct >= 1.0 ? AppColors.success : AppColors.primary,
                           ),

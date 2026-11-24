@@ -35,7 +35,29 @@ class MiniHistory extends ConsumerWidget {
         Text('Catatan terbaru',
           style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 10),
-        ...recent.map((log) => _HistoryItem(log: log)),
+        ...recent.map((log) => _HistoryItem(
+          log: log,
+          onDelete: () async {
+            final bool removed;
+            if (log is WaterLogModel) {
+              removed = await ref.read(dailyWaterProvider.notifier).deleteLog(log.id);
+            } else if (log is SweetLogModel) {
+              removed = await ref.read(sweetProvider.notifier).deleteLog(log.id);
+            } else {
+              removed = false;
+            }
+            if (removed && context.mounted) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text('Catatan dihapus'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+            }
+          },
+        )),
       ],
     );
   }
@@ -43,7 +65,19 @@ class MiniHistory extends ConsumerWidget {
 
 class _HistoryItem extends StatelessWidget {
   final dynamic log;
-  const _HistoryItem({required this.log});
+  final VoidCallback onDelete;
+  const _HistoryItem({required this.log, required this.onDelete});
+
+  String _sweetLabel(SweetLogModel sweet) {
+    final emoji = AppConstants.drinkEmoji[sweet.drinkType] ?? '🫗';
+    final customName = sweet.drinkName?.trim();
+    final name = (sweet.drinkType == 'other' &&
+            customName != null &&
+            customName.isNotEmpty)
+        ? customName
+        : (AppConstants.drinkLabel[sweet.drinkType] ?? 'Minuman');
+    return '$emoji $name';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,21 +85,18 @@ class _HistoryItem extends StatelessWidget {
     final time    = DateFormat('HH:mm').format(DateTime.parse(log.timestamp));
     final label   = isWater
         ? '1 Gelas Air 💧'
-        : (log is SweetLogModel
-            ? '${AppConstants.drinkEmoji[log.drinkType] ?? '🫗'} '
-              '${AppConstants.drinkLabel[log.drinkType] ?? log.drinkName ?? 'Minuman'}'
-            : '');
+        : (log is SweetLogModel ? _sweetLabel(log) : '');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
       decoration: BoxDecoration(
         color:        AppColors.bgCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(children: [
-        Text('⏰', style: const TextStyle(fontSize: 14)),
+        const Text('⏰', style: TextStyle(fontSize: 14)),
         const SizedBox(width: 8),
         Text(time,
           style: const TextStyle(
@@ -80,6 +111,13 @@ class _HistoryItem extends StatelessWidget {
             fontFamily: 'Nunito', fontWeight: FontWeight.w600,
             fontSize: 13,
           ))),
+        IconButton(
+          onPressed: onDelete,
+          icon: const Icon(Icons.close_rounded, size: 18),
+          color: AppColors.textHint,
+          tooltip: 'Hapus catatan',
+          visualDensity: VisualDensity.compact,
+        ),
       ]),
     );
   }

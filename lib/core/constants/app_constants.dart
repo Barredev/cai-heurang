@@ -16,9 +16,11 @@ class AppConstants {
   // ────────────────────────────────────────────────────────────
   // SETTINGS KEYS
   // ────────────────────────────────────────────────────────────
-  static const String keyIsOnboarded      = 'is_onboarded';
-  static const String keyActiveProfileId  = 'active_profile_id';
-  static const String keyLastResetDate    = 'last_reset_date';
+  static const String keyIsOnboarded           = 'is_onboarded';
+  static const String keyActiveProfileId       = 'active_profile_id';
+  static const String keyLastResetDate         = 'last_reset_date';
+  static const String keyRemindersEnabled      = 'reminders_enabled';
+  static const String keyReminderIntervalHours = 'reminder_interval_hours';
 
   // ────────────────────────────────────────────────────────────
   // XP SISTEM
@@ -51,6 +53,16 @@ class AppConstants {
     'Pohon Muda',
     'Pohon Rindang',
   ];
+
+  static String plantEmoji(int level) => switch (level) {
+    1 => '🌰',
+    2 => '🌱',
+    3 => '🌿',
+    4 => '🪴',
+    5 => '🌸',
+    6 => '🌳',
+    _ => '🌲',
+  };
 
   // Level 1–7, dihitung dari totalXp
   static int calculateLevel(int totalXp) {

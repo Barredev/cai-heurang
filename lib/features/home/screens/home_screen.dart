@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/achievement_share_service.dart';
 import '../../../shared/providers/app_providers.dart';
+import '../../profile/widgets/family_profile_sheets.dart';
+import '../widgets/achievement_share_sheet.dart';
 import '../widgets/plant_widget.dart';
 import '../widgets/progress_ring.dart';
 import '../widgets/mini_history.dart';
@@ -53,7 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     if (water.leveledUpThisLog) {
       final profile = ref.read(profileProvider);
-      await showDialog(
+      final wantShare = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (_) => RewardDialog.levelUp(
@@ -61,18 +64,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               (profile?.currentLevel ?? 1) - 1],
         ),
       );
-      ref.read(dailyWaterProvider.notifier).clearFlags();
-    } else if (water.targetReachedThisLog) {
-      await showDialog(
+      if (wantShare == true && mounted) {
+        await showAchievementShareSheet(
+          context,
+          initialType: AchievementCardType.levelUp,
+        );
+      }
+    }
+
+    if (water.targetReachedThisLog && mounted) {
+      final streakDays = ref.read(streakProvider)?.currentStreak ?? 1;
+      final profileId  = ref.read(profileProvider)?.id ?? '';
+      final wantShare  = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => RewardDialog.dailyComplete(
-          profileId: ref.read(profileProvider)?.id ?? '',
-          onShared: () => ref.read(repoProvider).markCertificateShared(
-            ref.read(profileProvider)?.id ?? '',
-          ),
-        ),
+        builder: (_) => RewardDialog.dailyComplete(streakDays: streakDays),
       );
+      if (wantShare == true && mounted) {
+        await showAchievementShareSheet(
+          context,
+          initialType: streakDays >= 2
+              ? AchievementCardType.streak
+              : AchievementCardType.dailyTarget,
+          onShared: () {
+            if (profileId.isNotEmpty) {
+              ref.read(repoProvider).markCertificateShared(profileId);
+            }
+          },
+        );
+      }
+    }
+
+    if (water.leveledUpThisLog || water.targetReachedThisLog) {
       ref.read(dailyWaterProvider.notifier).clearFlags();
     }
   }
@@ -118,38 +141,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Row(
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(greeting,
-                            style: Theme.of(context).textTheme.titleLarge),
-                          Text(
-                            'Level ${profile?.currentLevel ?? 1} · '
-                            '${AppConstants.plantPhaseNames[(profile?.currentLevel ?? 1) - 1]}',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
+                      child: GestureDetector(
+                        onTap: () => showFamilySwitcherSheet(context),
+                        behavior: HitTestBehavior.opaque,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    greeting,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 20,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Level ${profile?.currentLevel ?? 1} · '
+                              '${AppConstants.plantPhaseNames[(profile?.currentLevel ?? 1) - 1]}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    // Streak badge
+                    // Streak badge — tap untuk share achievement streak ala TikTok
                     if ((streak?.currentStreak ?? 0) > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.streakFire.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
+                      GestureDetector(
+                        onTap: () => showAchievementShareSheet(
+                          context,
+                          initialType: AchievementCardType.streak,
                         ),
-                        child: Row(children: [
-                          const Text('🔥', style: TextStyle(fontSize: 14)),
-                          const SizedBox(width: 4),
-                          Text('${streak?.currentStreak}',
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.streakFire,
-                            )),
-                        ]),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.streakFire.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(children: [
+                            const Text('🔥', style: TextStyle(fontSize: 14)),
+                            const SizedBox(width: 4),
+                            Text('${streak?.currentStreak}',
+                              style: const TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.streakFire,
+                              )),
+                          ]),
+                        ),
                       ),
                   ],
                 ),
@@ -223,7 +272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         borderRadius: BorderRadius.circular(36),
                         boxShadow: [
                           BoxShadow(
-                            color:  AppColors.primary.withOpacity(0.4),
+                            color:  AppColors.primary.withValues(alpha: 0.4),
                             blurRadius:   16,
                             offset: const Offset(0, 6),
                           ),

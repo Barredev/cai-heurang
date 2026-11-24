@@ -22,9 +22,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _gender    = 'male';
   int    _age       = 25;
   String _condition = 'none';
-  int?   _targetMl;     // null = pakai kalkulasi
   bool   _useCustom = false;
   final _customTargetCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    _nameCtrl.dispose();
+    _customTargetCtrl.dispose();
+    super.dispose();
+  }
 
   int get _calculatedTarget => AppConstants.minimumWaterMl(
     gender: _gender, age: _age, condition: _condition,
@@ -67,6 +74,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
 
     await NotificationService.requestPermission();
+    await ref.read(reminderSettingsProvider.notifier).syncSchedule();
 
     if (mounted) {
       Navigator.pushReplacementNamed(context, AppRouter.main);
@@ -84,14 +92,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           children: [
             _SplashPage(onNext: _next),
             _NamePage(ctrl: _nameCtrl, onNext: () {
-              if (_nameCtrl.text.trim().isEmpty) return;
+              if (_nameCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    const SnackBar(content: Text('Isi namamu dulu ya~')),
+                  );
+                return;
+              }
               _next();
             }),
             _DataPage(
               gender:    _gender,
               age:       _age,
               condition: _condition,
-              onGenderChanged:    (v) => setState(() => _gender = v),
+              onGenderChanged: (v) => setState(() {
+                _gender = v;
+                if (v != 'female') _condition = 'none';
+              }),
               onAgeChanged:       (v) => setState(() => _age = v),
               onConditionChanged: (v) => setState(() => _condition = v),
               onNext: _next,
@@ -342,71 +360,73 @@ class _TargetPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final glasses = (calculatedTarget / AppConstants.glassMl).ceil();
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('🎯', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 16),
-          Text('Target air harianmu',
-            style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 8),
-          Text('Berdasarkan panduan WHO & IOM',
-            style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 32),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🎯', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 16),
+            Text('Target air harianmu',
+              style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 8),
+            Text('Berdasarkan panduan WHO & IOM',
+              style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 32),
 
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.primaryLight),
-            ),
-            child: Column(children: [
-              Text('$calculatedTarget ml',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: AppColors.primary, fontSize: 40,
-                )),
-              Text('± $glasses gelas per hari',
-                style: Theme.of(context).textTheme.bodyLarge),
-            ]),
-          ),
-          const SizedBox(height: 16),
-
-          Text(
-            '⚠️ Angka ini berdasarkan panduan WHO & IOM. '
-            'Konsultasikan dengan dokter jika punya kondisi kesehatan tertentu.',
-            style: Theme.of(context).textTheme.labelSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-
-          SwitchListTile(
-            value:   useCustom,
-            onChanged: onToggleCustom,
-            title: const Text('Atur manual'),
-            activeColor: AppColors.primary,
-          ),
-          if (useCustom) ...[
-            TextField(
-              controller: customCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Target custom (ml)',
-                helperText: 'Minimum $minimumMl ml',
-                suffixText: 'ml',
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primaryLight),
               ),
+              child: Column(children: [
+                Text('$calculatedTarget ml',
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    color: AppColors.primary, fontSize: 40,
+                  )),
+                Text('± $glasses gelas per hari',
+                  style: Theme.of(context).textTheme.bodyLarge),
+              ]),
             ),
-          ],
-          const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
-          Row(children: [
-            TextButton(onPressed: onBack, child: const Text('← Kembali')),
-            const Spacer(),
-            ElevatedButton(onPressed: onNext, child: const Text('Pakai ini ✓')),
-          ]),
-        ],
+            Text(
+              '⚠️ Angka ini berdasarkan panduan WHO & IOM. '
+              'Konsultasikan dengan dokter jika punya kondisi kesehatan tertentu.',
+              style: Theme.of(context).textTheme.labelSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            SwitchListTile(
+              value:   useCustom,
+              onChanged: onToggleCustom,
+              title: const Text('Atur manual'),
+              activeThumbColor: AppColors.primary,
+            ),
+            if (useCustom) ...[
+              TextField(
+                controller: customCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Target custom (ml)',
+                  helperText: 'Minimum $minimumMl ml',
+                  suffixText: 'ml',
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+
+            Row(children: [
+              TextButton(onPressed: onBack, child: const Text('← Kembali')),
+              const Spacer(),
+              ElevatedButton(onPressed: onNext, child: const Text('Pakai ini ✓')),
+            ]),
+          ],
+        ),
       ),
     );
   }

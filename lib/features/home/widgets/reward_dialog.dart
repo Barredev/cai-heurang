@@ -1,41 +1,37 @@
 // lib/features/home/widgets/reward_dialog.dart
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
 class RewardDialog extends StatelessWidget {
   final String emoji;
   final String title;
   final String message;
   final String? buttonLabel;
-  final VoidCallback? onButton;
-  final VoidCallback? onDismiss;
 
   const RewardDialog._({
     required this.emoji,
     required this.title,
     required this.message,
     this.buttonLabel,
-    this.onButton,
-    this.onDismiss,
   });
 
   // Factory: target harian tercapai
   factory RewardDialog.dailyComplete({
-    required String profileId,
-    required VoidCallback onShared,
+    int streakDays = 1,
   }) => RewardDialog._(
-    emoji:       '🎉',
+    emoji:       '🔥🎉',
     title:       'Target Tercapai!',
-    message:     'Kamu berhasil minum cukup air hari ini!\nPamerkan ke grup keluarga yuk~ 😄',
-    buttonLabel: 'Pamer ke WhatsApp! 📱',
-    onButton:    onShared,
+    message:     streakDays > 1
+        ? 'Streak kamu naik jadi $streakDays hari berturut-turut!\nYuk bagikan achievement-mu~ 🔥'
+        : 'Kamu berhasil minum cukup air hari ini!\nYuk bagikan achievement-mu~ 😄',
+    buttonLabel: 'Bagikan Achievement 🔥',
   );
 
   // Factory: level naik
   factory RewardDialog.levelUp({required String phaseName}) => RewardDialog._(
-    emoji:   '🌱✨',
-    title:   'Tanamanmu Berevolusi!',
-    message: 'Sekarang sudah jadi $phaseName!\nTerus semangat minum airnya ya~ 💪',
+    emoji:       '🌱✨',
+    title:       'Tanamanmu Berevolusi!',
+    message:     'Sekarang sudah jadi $phaseName!\nTerus semangat minum airnya ya~ 💪',
+    buttonLabel: 'Bagikan Evolusi ✨',
   );
 
   @override
@@ -61,15 +57,12 @@ class RewardDialog extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    onButton?.call();
-                    Navigator.pop(context);
-                  },
+                  onPressed: () => Navigator.pop(context, true),
                   child: Text(buttonLabel!),
                 ),
               ),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, false),
               child: Text(buttonLabel != null ? 'Nanti saja' : 'Oke! 👍'),
             ),
           ],
